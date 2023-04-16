@@ -78,3 +78,29 @@ func LogJson(data interface{}) {
 
 	fmt.Println(string(bytes))
 }
+
+func Prepare1toM(key string, id any, value any) (valuesC []map[string]any) {
+	values := value.([]any)
+	valuesC = make([]map[string]any, len(values))
+
+	for i, v := range values {
+		valuesC[i] = v.(map[string]any)
+		valuesC[i][key] = id
+	}
+
+	return valuesC
+}
+
+func PrepareMtoM(key1 string, id any, key2 any, value any) (valuesC []map[string]any) {
+	values := value.([]any)
+	valuesC = make([]map[string]any, len(values))
+
+	for i, v := range values {
+		valuesC[i] = map[string]any{
+			key1:          id,
+			key2.(string): int(v.(float64)),
+		}
+	}
+
+	return valuesC
+}

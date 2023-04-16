@@ -36,12 +36,19 @@ func (v *Validation) validate() bool {
 	for field, rule := range v.Rules {
 		val, ok := v.Data[field]
 		value := fmt.Sprintf("%v", val)
+
+		if _, is_string := rule.(string); !is_string {
+			continue
+		}
+
 		rules := strings.Split(fmt.Sprintf("%v", (rule)), "|")
 
 		v.Errors[field] = map[string]string{}
 
 		for _, r := range rules {
-			if r == "required" {
+			if r == "" {
+				continue
+			} else if r == "required" {
 				if len(value) == 0 || !ok {
 					v.Errors[field]["required"] = field + " field is required"
 					continue
