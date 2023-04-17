@@ -37,6 +37,22 @@ func JsonFileParser(fileDir string) (map[string]any, error) {
 	return input, nil
 }
 
+func MultiMapValuesShifter(values []map[string]any, transformer map[string]any) []map[string]any {
+	var customResponses []map[string]any
+
+	for _, value := range values {
+		transformerC := map[string]any{}
+
+		for k, v := range transformer {
+			transformerC[k] = v
+		}
+		MapValuesShifter(transformerC, value)
+		customResponses = append(customResponses, transformerC)
+	}
+
+	return customResponses
+}
+
 func MapValuesShifter(dest map[string]any, origin map[string]any) map[string]any {
 	val := reflect.ValueOf(dest)
 	for _, inp := range val.MapKeys() {
