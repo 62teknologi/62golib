@@ -24,6 +24,24 @@ func ResponseData(status string, message string, data any) *response {
 	}
 }
 
+func ResponseDataPaginate(status string, message string, data any, pagination, filter map[string]any) map[string]any {
+	responses := map[string]any{
+		"status":  status,
+		"message": message,
+		"data":    data,
+	}
+
+	if len(pagination) != 0 {
+		responses["pagination"] = pagination
+	}
+
+	if len(filter) != 0 {
+		responses["filter"] = filter
+	}
+
+	return responses
+}
+
 func JsonFileParser(fileDir string) (map[string]any, error) {
 	jsonFile, err := os.Open(fileDir)
 	if err != nil {
