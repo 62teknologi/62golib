@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strconv"
 
 	"github.com/iancoleman/strcase"
 )
@@ -64,7 +65,10 @@ func MultiMapValuesShifter(values []map[string]any, transformer map[string]any) 
 		for k, v := range transformer {
 			transformerC[k] = v
 		}
+
 		MapValuesShifter(transformerC, value)
+		AttachJoin(transformerC, value)
+
 		customResponses = append(customResponses, transformerC)
 	}
 
@@ -137,4 +141,14 @@ func PrepareMtoM(key1 string, id any, key2 any, value any) (valuesC []map[string
 	}
 
 	return valuesC
+}
+
+func SetBelongsTo(transformer map[string]any) {
+	for i, v := range transformer["belongs_to"].(map[string]any) {
+		v := v.(map[string]any)
+		var result map[string]any
+		id := strconv.Itoa(int(transformer[v["fk"].(string)].(int32)))
+		DB.Table(Pluralize.Plural(i)).Where("id=" + id).Take(&result)
+		transformer[i] = result
+	}
 }

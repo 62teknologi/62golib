@@ -48,3 +48,37 @@ func SetPagination(query *gorm.DB, ctx *gin.Context) map[string]any {
 
 	return map[string]any{}
 }
+
+func SetJoin(query *gorm.DB, transformer map[string]any, columns *[]string) {
+	if transformer["belongs_to"] != nil {
+		for _, v := range transformer["belongs_to"].(map[string]any) {
+			v := v.(map[string]any)
+			table := v["table"].(string)
+			query.Joins("left join " + table + " on " + query.Statement.Table + "." + v["fk"].(string) + " = " + table + ".id")
+			query.Select("products.height").Select("users.id")
+
+			for _, val := range v["columns"].([]any) {
+				*columns = append(*columns, table+"."+val.(string)+" as "+table+"_"+val.(string))
+			}
+
+		}
+	}
+}
+
+func AttachJoin(transformer, value map[string]any) {
+	if transformer["belongs_to"] != nil {
+		for i, v := range transformer["belongs_to"].(map[string]any) {
+			v := v.(map[string]any)
+			values := map[string]any{}
+
+			for _, val := range v["columns"].([]any) {
+				values[val.(string)] = value[v["table"].(string)+"_"+val.(string)]
+				//delete(transformer, v["fk"].(string))
+			}
+
+			transformer[i] = values
+		}
+	}
+
+	delete(transformer, "belongs_to")
+}
