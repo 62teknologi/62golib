@@ -9,22 +9,29 @@ import (
 	"gorm.io/gorm"
 )
 
-func FilterByQueries(query *gorm.DB, filterable map[string]any, ctx *gin.Context) map[string]any {
+func SetFilterByQuery(query *gorm.DB, transformer map[string]any, ctx *gin.Context) map[string]any {
 	filter := map[string]any{}
 	queries := ctx.Request.URL.Query()
 
-	for name, values := range queries {
-		name = strings.Replace(name, "[]", "", -1)
+	if transformer["filterable"] != nil {
+		filterable := transformer["filterable"].(map[string]any)
 
-		if _, ok := filterable[name]; ok {
-			if values[0] != "" {
-				query.Where(name+" IN ?", values)
-			} else {
-				query.Where(name + " IS NULL")
+		for name, values := range queries {
+			name = strings.Replace(name, "[]", "", -1)
+
+			if _, ok := filterable[name]; ok {
+				if values[0] != "" {
+					query.Where(name+" IN ?", values)
+				} else {
+					query.Where(name + " IS NULL")
+				}
+
+				filter[name] = values
 			}
-			filter[name] = values
 		}
 	}
+
+	delete(transformer, "filterable")
 
 	return filter
 }
