@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -40,7 +41,10 @@ func SetPagination(query *gorm.DB, ctx *gin.Context) map[string]any {
 	if page, _ := strconv.Atoi(ctx.Query("page")); page != 0 {
 		var total int64
 
-		DB.Table(query.Statement.Table).Count(&total)
+		if err := DB.Table(query.Statement.Table).Count(&total).Error; err != nil {
+			fmt.Println(err)
+		}
+
 		per_page, _ := strconv.Atoi(ctx.DefaultQuery("per_page", "30"))
 		offset := (page - 1) * per_page
 		query.Limit(per_page).Offset(offset)
@@ -56,7 +60,7 @@ func SetPagination(query *gorm.DB, ctx *gin.Context) map[string]any {
 	return map[string]any{}
 }
 
-func SetJoin(query *gorm.DB, transformer map[string]any, columns *[]string) {
+func SetBelongsTo(query *gorm.DB, transformer map[string]any, columns *[]string) {
 	if transformer["belongs_to"] != nil {
 		for _, v := range transformer["belongs_to"].(map[string]any) {
 			v := v.(map[string]any)
@@ -72,7 +76,56 @@ func SetJoin(query *gorm.DB, transformer map[string]any, columns *[]string) {
 	}
 }
 
-func AttachJoin(transformer, value map[string]any) {
+func AttachHasMany(transformer map[string]any) {
+	if transformer["has_many"] != nil {
+		for i, v := range transformer["has_many"].(map[string]any) {
+			v := v.(map[string]any)
+			values := []map[string]any{}
+			colums := convertAnyToString(v["columns"].([]any))
+			fk := v["fk"].(string)
+
+			if err := DB.Table(v["table"].(string)).Select(colums).Where(fk+" = ?", transformer["id"]).Find(&values).Error; err != nil {
+				fmt.Println(err)
+			}
+
+			transformer[i] = values
+		}
+	}
+
+	delete(transformer, "has_many")
+}
+
+func MultiAttachHasMany(results []map[string]any) {
+	ids := []string{}
+
+	for _, result := range results {
+		ids = append(ids, strconv.Itoa(int(result["id"].(int32))))
+	}
+
+	transformer := results[0]
+
+	if transformer["has_many"] != nil {
+		for i, v := range transformer["has_many"].(map[string]any) {
+			v := v.(map[string]any)
+			values := []map[string]any{}
+			fk := v["fk"].(string)
+			colums := convertAnyToString(v["columns"].([]any))
+			colums = append(colums, fk)
+
+			if err := DB.Table(v["table"].(string)).Select(colums).Where(fk+" in ?", ids).Find(&values).Error; err != nil {
+				fmt.Println(err)
+			}
+
+			for _, result := range results {
+				result[i] = filterSliceByMapIndex(values, fk, result["id"])
+			}
+		}
+	}
+
+	delete(transformer, "has_many")
+}
+
+func AttachBelongsTo(transformer, value map[string]any) {
 	if transformer["belongs_to"] != nil {
 		for i, v := range transformer["belongs_to"].(map[string]any) {
 			v := v.(map[string]any)

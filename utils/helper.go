@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"reflect"
-	"strconv"
 
 	"github.com/iancoleman/strcase"
 )
@@ -56,7 +55,7 @@ func JsonFileParser(fileDir string) (map[string]any, error) {
 	return input, nil
 }
 
-func MultiMapValuesShifter(values []map[string]any, transformer map[string]any) []map[string]any {
+func MultiMapValuesShifter(transformer map[string]any, values []map[string]any) []map[string]any {
 	var customResponses []map[string]any
 
 	for _, value := range values {
@@ -67,7 +66,7 @@ func MultiMapValuesShifter(values []map[string]any, transformer map[string]any) 
 		}
 
 		MapValuesShifter(transformerC, value)
-		AttachJoin(transformerC, value)
+		AttachBelongsTo(transformerC, value)
 
 		customResponses = append(customResponses, transformerC)
 	}
@@ -107,7 +106,7 @@ func MapNullValuesRemover(m map[string]any) {
 	}
 }
 
-func LogJson(data interface{}) {
+func LogJson(data any) {
 	bytes, err := json.Marshal(data)
 
 	if err != nil {
@@ -143,12 +142,20 @@ func PrepareMtoM(key1 string, id any, key2 any, value any) (valuesC []map[string
 	return valuesC
 }
 
-func SetBelongsTo(transformer map[string]any) {
-	for i, v := range transformer["belongs_to"].(map[string]any) {
-		v := v.(map[string]any)
-		var result map[string]any
-		id := strconv.Itoa(int(transformer[v["fk"].(string)].(int32)))
-		DB.Table(Pluralize.Plural(i)).Where("id=" + id).Take(&result)
-		transformer[i] = result
+func convertAnyToString(anySlice []any) []string {
+	strSlice := make([]string, len(anySlice))
+	for i, v := range anySlice {
+		strSlice[i] = fmt.Sprintf("%v", v)
 	}
+	return strSlice
+}
+
+func filterSliceByMapIndex(data []map[string]any, index string, productID any) []any {
+	var values []any
+	for _, item := range data {
+		if item[index] == productID {
+			values = append(values, item)
+		}
+	}
+	return values
 }
