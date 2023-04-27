@@ -20,14 +20,24 @@ func SetFilterByQuery(query *gorm.DB, transformer map[string]any, ctx *gin.Conte
 		for name, values := range queries {
 			name = strings.Replace(name, "[]", "", -1)
 
-			if _, ok := filterable[name]; ok {
-				if values[0] != "" {
-					query.Where(name+" IN ?", values)
-				} else {
-					query.Where(name + " IS NULL")
-				}
-
+			if val, ok := filterable[name]; ok {
 				filter[name] = values
+				if values[0] != "" {
+					if val == "string" {
+						query.Where(query.Statement.Table+"."+name+" LIKE ?", "%"+values[0]+"%")
+						continue
+					}
+
+					if val == "timestamp" {
+						query.Where("DATE("+query.Statement.Table+"."+name+") = ?", values[0])
+						continue
+					}
+
+					query.Where(query.Statement.Table+"."+name+" IN ?", values)
+
+				} else {
+					query.Where(query.Statement.Table + "." + name + " IS NULL")
+				}
 			}
 		}
 	}
