@@ -66,7 +66,8 @@ func SetBelongsTo(query *gorm.DB, transformer map[string]any, columns *[]string)
 			v := v.(map[string]any)
 			table := v["table"].(string)
 			query.Joins("left join " + table + " on " + query.Statement.Table + "." + v["fk"].(string) + " = " + table + ".id")
-			query.Select("products.height").Select("users.id")
+
+			*columns = append(*columns, query.Statement.Table+"."+v["fk"].(string))
 
 			for _, val := range v["columns"].([]any) {
 				*columns = append(*columns, table+"."+val.(string)+" as "+table+"_"+val.(string))
@@ -102,27 +103,28 @@ func MultiAttachHasMany(results []map[string]any) {
 		ids = append(ids, strconv.Itoa(int(result["id"].(int32))))
 	}
 
-	transformer := results[0]
+	if len(results) > 0 {
+		transformer := results[0]
 
-	if transformer["has_many"] != nil {
-		for i, v := range transformer["has_many"].(map[string]any) {
-			v := v.(map[string]any)
-			values := []map[string]any{}
-			fk := v["fk"].(string)
-			colums := convertAnyToString(v["columns"].([]any))
-			colums = append(colums, fk)
+		if transformer["has_many"] != nil {
+			for i, v := range transformer["has_many"].(map[string]any) {
+				v := v.(map[string]any)
+				values := []map[string]any{}
+				fk := v["fk"].(string)
+				colums := convertAnyToString(v["columns"].([]any))
+				colums = append(colums, fk)
 
-			if err := DB.Table(v["table"].(string)).Select(colums).Where(fk+" in ?", ids).Find(&values).Error; err != nil {
-				fmt.Println(err)
-			}
+				if err := DB.Table(v["table"].(string)).Select(colums).Where(fk+" in ?", ids).Find(&values).Error; err != nil {
+					fmt.Println(err)
+				}
 
-			for _, result := range results {
-				result[i] = filterSliceByMapIndex(values, fk, result["id"])
+				for _, result := range results {
+					result[i] = filterSliceByMapIndex(values, fk, result["id"])
+					delete(result, "has_many")
+				}
 			}
 		}
 	}
-
-	delete(transformer, "has_many")
 }
 
 func AttachBelongsTo(transformer, value map[string]any) {
