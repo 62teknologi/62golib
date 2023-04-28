@@ -47,11 +47,38 @@ func SetFilterByQuery(query *gorm.DB, transformer map[string]any, ctx *gin.Conte
 	return filter
 }
 
+func SetFilterBySearchAble(query *gorm.DB, transformer map[string]any, ctx *gin.Context) map[string]any {
+	filter := map[string]any{}
+
+	if transformer["searchable"] != nil {
+		searchable := transformer["searchable"].([]interface{})
+		search := ctx.Query("search")
+		fmt.Println(searchable, search)
+
+		if search != "" {
+			filter["value"] = search
+			filter["column"] = searchable
+			orConditions := []string{}
+
+			for _, v := range searchable {
+				orConditions = append(orConditions, query.Statement.Table+"."+v.(string)+" LIKE '%"+search+"%'")
+			}
+
+			query.Where(strings.Join(orConditions, " OR "))
+
+		}
+	}
+
+	delete(transformer, "searchable")
+
+	return filter
+}
+
 func SetPagination(query *gorm.DB, ctx *gin.Context) map[string]any {
 	if page, _ := strconv.Atoi(ctx.Query("page")); page != 0 {
 		var total int64
 
-		if err := DB.Table(query.Statement.Table).Count(&total).Error; err != nil {
+		if err := query.Count(&total).Error; err != nil {
 			fmt.Println(err)
 		}
 
