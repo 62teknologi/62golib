@@ -44,14 +44,17 @@ func ResponseDataPaginate(status string, message string, data any, pagination, f
 
 func JsonFileParser(fileDir string) (map[string]any, error) {
 	jsonFile, err := os.Open(fileDir)
+
 	if err != nil {
 		return nil, fmt.Errorf("error while parsing input: %w", err)
 	}
+
 	defer jsonFile.Close()
 
 	byteValue, _ := io.ReadAll(jsonFile)
 	var input map[string]any
 	json.Unmarshal(byteValue, &input)
+
 	return input, nil
 }
 
@@ -76,6 +79,7 @@ func MultiMapValuesShifter(transformer map[string]any, values []map[string]any) 
 
 func MapValuesShifter(dest map[string]any, origin map[string]any) map[string]any {
 	val := reflect.ValueOf(dest)
+
 	for _, inp := range val.MapKeys() {
 		key := inp.String()
 		if origin[key] == nil {
@@ -87,6 +91,7 @@ func MapValuesShifter(dest map[string]any, origin map[string]any) map[string]any
 		}
 		dest[key] = origin[key]
 	}
+
 	return dest
 }
 
@@ -144,18 +149,22 @@ func PrepareMtoM(key1 string, id any, key2 any, value any) (valuesC []map[string
 
 func convertAnyToString(anySlice []any) []string {
 	strSlice := make([]string, len(anySlice))
+
 	for i, v := range anySlice {
 		strSlice[i] = fmt.Sprintf("%v", v)
 	}
+
 	return strSlice
 }
 
 func filterSliceByMapIndex(data []map[string]any, index string, productID any) []any {
 	var values []any
+
 	for _, item := range data {
 		if item[index] == productID {
 			values = append(values, item)
 		}
 	}
+
 	return values
 }

@@ -22,6 +22,7 @@ func SetFilterByQuery(query *gorm.DB, transformer map[string]any, ctx *gin.Conte
 
 			if val, ok := filterable[name]; ok {
 				filter[name] = values
+
 				if values[0] != "" {
 					if val == "string" {
 						query.Where(query.Statement.Table+"."+name+" LIKE ?", "%"+values[0]+"%")
@@ -34,7 +35,6 @@ func SetFilterByQuery(query *gorm.DB, transformer map[string]any, ctx *gin.Conte
 					}
 
 					query.Where(query.Statement.Table+"."+name+" IN ?", values)
-
 				} else {
 					query.Where(query.Statement.Table + "." + name + " IS NULL")
 				}
@@ -47,7 +47,7 @@ func SetFilterByQuery(query *gorm.DB, transformer map[string]any, ctx *gin.Conte
 	return filter
 }
 
-func SetFilterBySearchAble(query *gorm.DB, transformer map[string]any, ctx *gin.Context) map[string]any {
+func SetGlobalSearch(query *gorm.DB, transformer map[string]any, ctx *gin.Context) map[string]any {
 	filter := map[string]any{}
 
 	if transformer["searchable"] != nil {
