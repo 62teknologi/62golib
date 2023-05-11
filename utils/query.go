@@ -10,6 +10,18 @@ import (
 	"gorm.io/gorm"
 )
 
+func SetOrderByQuery(query *gorm.DB, ctx *gin.Context) {
+	orders := ctx.QueryArray("order[]")
+
+	if orders != nil {
+		for _, order := range orders {
+			query.Order(order)
+		}
+	} else {
+		query.Order("id desc")
+	}
+}
+
 func SetFilterByQuery(query *gorm.DB, transformer map[string]any, ctx *gin.Context) map[string]any {
 	filter := map[string]any{}
 	queries := ctx.Request.URL.Query()
@@ -53,7 +65,6 @@ func SetGlobalSearch(query *gorm.DB, transformer map[string]any, ctx *gin.Contex
 	if transformer["searchable"] != nil {
 		searchable := transformer["searchable"].([]interface{})
 		search := ctx.Query("search")
-		fmt.Println(searchable, search)
 
 		if search != "" {
 			filter["value"] = search
