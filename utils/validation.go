@@ -53,6 +53,8 @@ func (v *Validation) validate() bool {
 					v.Errors[field]["required"] = field + " field is required"
 					continue
 				}
+			} else if value == "" {
+				break
 			} else if r == "email" {
 				if !isEmailValid(value) {
 					v.Errors[field]["email"] = field + " field must be a valid email"
@@ -99,8 +101,10 @@ func parseRule(rule string) (int, error) {
 	lengthStr := strings.TrimPrefix(rule, "min:")
 	lengthStr = strings.TrimPrefix(lengthStr, "max:")
 	length, err := strconv.Atoi(lengthStr)
+
 	if err != nil {
 		return 0, err
 	}
+
 	return length, nil
 }
