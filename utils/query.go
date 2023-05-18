@@ -148,7 +148,9 @@ func MultiAttachHasMany(results []map[string]any) {
 	ids := []string{}
 
 	for _, result := range results {
-		ids = append(ids, strconv.Itoa(int(result["id"].(int32))))
+		if result["id"] != nil {
+			ids = append(ids, strconv.Itoa(int(result["id"].(int32))))
+		}
 	}
 
 	if len(results) > 0 {
