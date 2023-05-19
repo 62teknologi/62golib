@@ -11,7 +11,7 @@ import (
 )
 
 func SetOrderByQuery(query *gorm.DB, ctx *gin.Context) {
-	orders := ctx.QueryArray("order[]")
+	orders := append(ctx.QueryArray("order"), ctx.QueryArray("order[]")...)
 
 	if orders != nil {
 		for _, order := range orders {
