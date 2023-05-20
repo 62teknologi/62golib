@@ -37,7 +37,7 @@ func SetFilterByQuery(query *gorm.DB, transformer map[string]any, ctx *gin.Conte
 
 				if values[0] != "" {
 					if val == "string" {
-						query.Where(query.Statement.Table+"."+name+" ILIKE ?", "%"+values[0]+"%")
+						query.Where("LOWER("+query.Statement.Table+"."+name+") LIKE LOWER(?)", "%"+values[0]+"%")
 						continue
 					}
 
@@ -72,7 +72,7 @@ func SetGlobalSearch(query *gorm.DB, transformer map[string]any, ctx *gin.Contex
 			orConditions := []string{}
 
 			for _, v := range searchable {
-				orConditions = append(orConditions, query.Statement.Table+"."+v.(string)+" ILIKE '%"+search+"%'")
+				orConditions = append(orConditions, "LOWER("+query.Statement.Table+"."+v.(string)+") LIKE LOWER('%"+search+"%')")
 			}
 
 			query.Where(strings.Join(orConditions, " OR "))
