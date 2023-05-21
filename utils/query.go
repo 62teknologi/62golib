@@ -13,12 +13,15 @@ import (
 func SetOrderByQuery(query *gorm.DB, ctx *gin.Context) {
 	orders := append(ctx.QueryArray("order"), ctx.QueryArray("order[]")...)
 
+	//todo : should may filter by join table
+	table := query.Statement.Table
+
 	if orders != nil {
 		for _, order := range orders {
-			query.Order(order)
+			query.Order(table + "." + order)
 		}
 	} else {
-		query.Order("id desc")
+		query.Order(table + ".id desc")
 	}
 }
 
@@ -35,20 +38,34 @@ func SetFilterByQuery(query *gorm.DB, transformer map[string]any, ctx *gin.Conte
 			if val, ok := filterable[name]; ok {
 				filter[name] = values
 
+				//todo : should may filter by join table
+				table := query.Statement.Table
+
 				if values[0] != "" {
 					if val == "string" {
-						query.Where("LOWER("+query.Statement.Table+"."+name+") LIKE LOWER(?)", "%"+values[0]+"%")
+						query.Where("LOWER("+table+"."+name+") LIKE LOWER(?)", "%"+values[0]+"%")
 						continue
 					}
 
 					if val == "timestamp" {
-						query.Where("DATE("+query.Statement.Table+"."+name+") = ?", values[0])
+						query.Where("DATE("+table+"."+name+") = ?", values[0])
 						continue
 					}
 
-					query.Where(query.Statement.Table+"."+name+" IN ?", values)
+					if val == "beetwen" {
+						beetwen := strings.Split(values[0], ",")
+						query.Where(table+"."+name+" >= ?", beetwen[0])
+
+						if len(beetwen) >= 2 {
+							query.Where(table+"."+name+" <= ?", beetwen[1])
+						}
+
+						continue
+					}
+
+					query.Where(table+"."+name+" IN ?", values)
 				} else {
-					query.Where(query.Statement.Table + "." + name + " IS NULL")
+					query.Where(table + "." + name + " IS NULL")
 				}
 			}
 		}
