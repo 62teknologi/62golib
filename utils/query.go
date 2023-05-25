@@ -53,11 +53,24 @@ func SetFilterByQuery(query *gorm.DB, transformer map[string]any, ctx *gin.Conte
 					}
 
 					if val == "beetwen" {
-						beetwen := strings.Split(values[0], ",")
-						query.Where(table+"."+name+" >= ?", beetwen[0])
+						query.Where(table+"."+name+" >= ?", values[0])
 
-						if len(beetwen) >= 2 {
-							query.Where(table+"."+name+" <= ?", beetwen[1])
+						if len(values) >= 2 {
+							query.Where(table+"."+name+" <= ?", values[1])
+						}
+
+						continue
+					}
+
+					if val == "boolean" {
+						if len(values) >= 2 && values[0] != values[1] {
+							continue
+						}
+
+						if num, _ := strconv.Atoi(values[0]); num >= 1 {
+							query.Where(table+"."+name+" >= ?", 1)
+						} else {
+							query.Where(table+"."+name+" = ?", 0)
 						}
 
 						continue
