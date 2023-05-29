@@ -24,7 +24,7 @@ func ResponseData(status string, message string, data any) *response {
 	}
 }
 
-func ResponseDataPaginate(status string, message string, data any, pagination, filter map[string]any) map[string]any {
+func ResponseDataPaginate(status string, message string, data any, pagination, filter map[string]any, search map[string]any, summary map[string]any) map[string]any {
 	responses := map[string]any{
 		"status":  status,
 		"message": message,
@@ -37,6 +37,14 @@ func ResponseDataPaginate(status string, message string, data any, pagination, f
 
 	if len(filter) != 0 {
 		responses["filter"] = filter
+	}
+
+	if len(summary) != 0 {
+		responses["summary"] = summary
+	}
+
+	if len(search) != 0 {
+		responses["search"] = search
 	}
 
 	return responses
@@ -70,6 +78,7 @@ func MultiMapValuesShifter(transformer map[string]any, values []map[string]any) 
 
 		MapValuesShifter(transformerC, value)
 		AttachBelongsTo(transformerC, value)
+		AttachOperation(transformerC, value)
 
 		customResponses = append(customResponses, transformerC)
 	}

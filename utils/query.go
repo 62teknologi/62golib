@@ -155,6 +155,14 @@ func SetBelongsTo(query *gorm.DB, transformer map[string]any, columns *[]string)
 	}
 }
 
+func SetOperation(query *gorm.DB, transformer map[string]any, columns *[]string) {
+	if transformer["operation"] != nil {
+		for i, v := range transformer["operation"].(map[string]any) {
+			*columns = append(*columns, "("+v.(string)+") as operation_"+i)
+		}
+	}
+}
+
 func AttachHasMany(transformer map[string]any) {
 	if transformer["has_many"] != nil {
 		for i, v := range transformer["has_many"].(map[string]any) {
@@ -223,4 +231,38 @@ func AttachBelongsTo(transformer, value map[string]any) {
 	}
 
 	delete(transformer, "belongs_to")
+}
+
+func AttachOperation(transformer, value map[string]any) {
+	if transformer["operation"] != nil {
+		operation := map[string]any{}
+
+		for i, _ := range transformer["operation"].(map[string]any) {
+			operation[i] = value["operation_"+i]
+		}
+
+		transformer["operation"] = operation
+	}
+}
+
+func GetSummary(transformer map[string]any, values []map[string]any) map[string]any {
+	summary := map[string]any{}
+
+	if transformer["summary"] != nil {
+		if s := transformer["summary"].(map[string]any); s["total"] != "" {
+			var total int32 = 0
+			for _, v := range values {
+				switch val := v[s["total"].(string)].(type) {
+				case int32:
+					total += val
+				case float64:
+					total += int32(val)
+				}
+				delete(v, "summary")
+			}
+			summary["total"] = total
+		}
+	}
+
+	return summary
 }
