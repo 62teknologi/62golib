@@ -1,17 +1,15 @@
 package utils
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
+// todo: need to handle form data
 func ParseForm(ctx *gin.Context) map[string]any {
 	input := map[string]any{}
 	contentType := ctx.GetHeader("Content-Type")
-
-	fmt.Println(contentType)
 
 	if contentType == "application/json" {
 		if err := ctx.BindJSON(&input); err != nil {
