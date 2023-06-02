@@ -2,6 +2,7 @@ package utils
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,10 +23,22 @@ func ParseForm(ctx *gin.Context) map[string]any {
 			ctx.JSON(http.StatusBadRequest, ResponseData("error", err.Error(), nil))
 		}
 
-		input = make(map[string]interface{})
+		input = make(map[string]any)
 
-		for key, values := range ctx.Request.PostForm {
-			input[key] = values[0]
+		for name, values := range ctx.Request.PostForm {
+			if !strings.Contains(name, "[]") {
+				input[name] = values[0]
+			} else {
+				// looks complex, but it is needed for make sure the type as any
+				newVals := make([]any, len(values))
+
+				for i, s := range values {
+					newVals[i] = s
+				}
+
+				name = strings.Replace(name, "[]", "", -1)
+				input[name] = newVals
+			}
 		}
 	}
 
