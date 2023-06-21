@@ -179,7 +179,7 @@ func filterSliceByMapIndex(data []map[string]any, index string, productID any) [
 	return values
 }
 
-func ConvertToInt(value interface{}) int {
+func ConvertToInt(value any) int {
 	switch v := value.(type) {
 	case int:
 		return v
