@@ -140,15 +140,15 @@ func SetPagination(query *gorm.DB, ctx *gin.Context) map[string]any {
 
 func SetBelongsTo(query *gorm.DB, transformer map[string]any, columns *[]string) {
 	if transformer["belongs_to"] != nil {
-		for _, v := range transformer["belongs_to"].(map[string]any) {
+		for name, v := range transformer["belongs_to"].(map[string]any) {
 			v := v.(map[string]any)
 			table := v["table"].(string)
-			query.Joins("left join " + table + " on " + query.Statement.Table + "." + v["fk"].(string) + " = " + table + ".id")
+			query.Joins("left join " + table + " as " + name + " on " + query.Statement.Table + "." + v["fk"].(string) + " = " + name + ".id")
 
 			*columns = append(*columns, query.Statement.Table+"."+v["fk"].(string))
 
 			for _, val := range v["columns"].([]any) {
-				*columns = append(*columns, table+"."+val.(string)+" as "+table+"_"+val.(string))
+				*columns = append(*columns, name+"."+val.(string)+" as "+name+"_"+val.(string))
 			}
 
 		}
@@ -217,16 +217,16 @@ func MultiAttachHasMany(results []map[string]any) {
 
 func AttachBelongsTo(transformer, value map[string]any) {
 	if transformer["belongs_to"] != nil {
-		for i, v := range transformer["belongs_to"].(map[string]any) {
+		for name, v := range transformer["belongs_to"].(map[string]any) {
 			v := v.(map[string]any)
 			values := map[string]any{}
 
 			for _, val := range v["columns"].([]any) {
-				values[val.(string)] = value[v["table"].(string)+"_"+val.(string)]
+				values[val.(string)] = value[name+"_"+val.(string)]
 				//delete(transformer, v["fk"].(string))
 			}
 
-			transformer[i] = values
+			transformer[name] = values
 		}
 	}
 
