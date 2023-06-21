@@ -53,7 +53,7 @@ func (v *Validation) validate() bool {
 					v.Errors[field]["required"] = field + " field is required"
 					continue
 				}
-			} else if value == "" {
+			} else if value == "" || value == "<nil>" {
 				break
 			} else if r == "email" {
 				if !isEmailValid(value) {
