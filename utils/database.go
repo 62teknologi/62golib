@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -66,4 +67,18 @@ func ConnectDatabase(DBDriver string, DBSource1 string, DBSource2 string) {
 	}
 
 	DB = db1
+}
+
+func DuplicateError(err error) error {
+	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			if pgErr.Code == "23505" {
+				return fmt.Errorf("duplicate key error: %s", pgErr.ConstraintName)
+			}
+		}
+		// TODO add more sql driver cases
+	}
+
+	// Default case, assume it's not a duplication error
+	return nil
 }
