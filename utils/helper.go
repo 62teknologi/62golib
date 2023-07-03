@@ -53,9 +53,8 @@ func ResponseDataPaginate(status string, message string, data any, pagination, f
 
 func JsonFileParser(fileDir string) (map[string]any, error) {
 	jsonFile, err := os.Open(fileDir)
-
 	if err != nil {
-		return nil, fmt.Errorf("error while parsing input: %w", err)
+		return nil, fmt.Errorf("error while parsing file from %s", fileDir)
 	}
 
 	defer jsonFile.Close()
