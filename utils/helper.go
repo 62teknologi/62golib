@@ -207,7 +207,11 @@ func ConvertToInt(value any) int {
 	case string:
 		num, err := strconv.Atoi(v)
 		if err != nil {
-			return 0
+			numF, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				return 0
+			}
+			return int(numF)
 		}
 		return num
 	default:

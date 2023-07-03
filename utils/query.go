@@ -250,14 +250,10 @@ func GetSummary(transformer map[string]any, values []map[string]any) map[string]
 
 	if transformer["summary"] != nil {
 		if s := transformer["summary"].(map[string]any); s["total"] != "" {
-			var total int32 = 0
+			var total int = 0
 			for _, v := range values {
-				switch val := v[s["total"].(string)].(type) {
-				case int32:
-					total += val
-				case float64:
-					total += int32(val)
-				}
+				val := v[s["total"].(string)]
+				total += ConvertToInt(val)
 				delete(v, "summary")
 			}
 			summary["total"] = total
