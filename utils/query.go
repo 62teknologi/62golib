@@ -76,6 +76,11 @@ func SetFilterByQuery(query *gorm.DB, transformer map[string]any, ctx *gin.Conte
 						continue
 					}
 
+					if val == "belongs_to" {
+						query.Where(name+" IN ?", values)
+						continue
+					}
+
 					query.Where(table+"."+name+" IN ?", values)
 				} else {
 					query.Where(table + "." + name + " IS NULL")
