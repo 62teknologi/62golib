@@ -218,3 +218,23 @@ func ConvertToInt(value any) int {
 		return 0
 	}
 }
+
+func SetDoubleRecord(transformer map[string]any, defaultItem map[string]any, itemKey string) map[string]any {
+	for _, d := range transformer["duplicate"].(map[string]any)[itemKey].(map[string]any)["columns"].([]any) {
+		transformer[d.(string)] = defaultItem[d.(string)]
+	}
+
+	return transformer
+}
+
+func FilterMap(data any, condition func(item map[string]any) bool) []map[string]any {
+	filtered := make([]map[string]any, 0)
+
+	for _, item := range data.([]any) {
+		if condition(item.(map[string]any)) {
+			filtered = append(filtered, item.(map[string]any))
+		}
+	}
+
+	return filtered
+}
