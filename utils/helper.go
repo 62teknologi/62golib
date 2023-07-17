@@ -142,6 +142,20 @@ func Prepare1toM(key string, id any, value any) (valuesC []map[string]any) {
 	return valuesC
 }
 
+func ProcessHasMany(data map[string]interface{}, callback func(key string, data map[string]any, options map[string]any, parentKey string), parentKey string) {
+	if hasMany, ok := data["has_many"].(map[string]interface{}); ok {
+		for key, value := range hasMany {
+			if subData, ok := value.(map[string]interface{}); ok {
+				callback(key, data, subData, parentKey)
+				if parentKey != "" {
+					parentKey = key + "." + parentKey
+				}
+				ProcessHasMany(subData, callback, key)
+			}
+		}
+	}
+}
+
 func PrepareMtoM(key1 string, id any, key2 any, value any) (valuesC []map[string]any) {
 	values := value.([]any)
 	valuesC = make([]map[string]any, len(values))
@@ -154,6 +168,22 @@ func PrepareMtoM(key1 string, id any, key2 any, value any) (valuesC []map[string
 	}
 
 	return valuesC
+}
+
+func RemoveSliceAndMap(data map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	for k, v := range data {
+		if v != nil {
+			if reflect.TypeOf(v).Kind() == reflect.Slice || reflect.TypeOf(v).Kind() == reflect.Map {
+				continue
+			}
+		}
+
+		result[k] = v
+	}
+
+	return result
 }
 
 func convertAnyToString(anySlice []any) []string {
