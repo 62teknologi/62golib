@@ -66,6 +66,27 @@ func JsonFileParser(fileDir string) (map[string]any, error) {
 	return input, nil
 }
 
+func MultiMapValuesShifter2(transformer map[string]any, values []map[string]any) []map[string]any {
+	var customResponses []map[string]any
+
+	for _, value := range values {
+		transformerC := map[string]any{}
+
+		for _, v := range transformer["columns"].([]any) {
+			transformerC[v.(string)] = v
+		}
+
+		transformerC["belongs_to"] = transformer["belongs_to"]
+
+		MapValuesShifter(transformerC, value)
+		AttachBelongsTo(transformerC, value)
+
+		customResponses = append(customResponses, transformerC)
+	}
+
+	return customResponses
+}
+
 func MultiMapValuesShifter(transformer map[string]any, values []map[string]any) []map[string]any {
 	var customResponses []map[string]any
 
@@ -200,7 +221,7 @@ func filterSliceByMapIndex(data []map[string]any, index string, productID any) [
 	var values []any
 
 	for _, item := range data {
-		if item[index] == productID {
+		if ConvertToInt(item[index]) == ConvertToInt(productID) {
 			values = append(values, item)
 		}
 	}
