@@ -47,14 +47,16 @@ func Validate(data map[string]any, rules map[string]any) (*Validation, bool) {
 	}
 	for _, key := range filteredSubData {
 		subData := data[key].([]any)
-		subRules := rules[key].([]any)
-		if subData[0] != nil {
-			if reflect.TypeOf(subData[0]).Kind() == reflect.Map {
-				validation := NewValidation(subData[0].(map[string]any), subRules[0].(map[string]any))
-				if validation.validate() {
-					return validation, true
-				} else {
-					return validation, false
+		if rules[key] != nil {
+			subRules := rules[key].([]any)
+			if subData[0] != nil {
+				if reflect.TypeOf(subData[0]).Kind() == reflect.Map {
+					validation := NewValidation(subData[0].(map[string]any), subRules[0].(map[string]any))
+					if validation.validate() {
+						return validation, true
+					} else {
+						return validation, false
+					}
 				}
 			}
 		}
