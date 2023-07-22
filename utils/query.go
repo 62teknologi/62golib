@@ -143,17 +143,27 @@ func SetPagination(query *gorm.DB, ctx *gin.Context) map[string]any {
 	return map[string]any{}
 }
 
-func SetBelongsTo(query *gorm.DB, transformer map[string]any, columns *[]string) {
+func SetBelongsTo(query *gorm.DB, transformer map[string]any, columns *[]string, ctx *gin.Context) {
 	if transformer["belongs_to"] != nil {
 		for name, v := range transformer["belongs_to"].(map[string]any) {
 			v := v.(map[string]any)
 			table := v["table"].(string)
-			query.Joins("left join " + table + " as " + name + " on " + query.Statement.Table + "." + v["fk"].(string) + " = " + name + ".id")
-
-			*columns = append(*columns, query.Statement.Table+"."+v["fk"].(string))
+			fk := v["fk"].(string)
 
 			for _, val := range v["columns"].([]any) {
 				*columns = append(*columns, name+"."+val.(string)+" as "+name+"_"+val.(string))
+			}
+
+			if v["composite"] != nil {
+				composite := v["composite"].(string)
+				compositeValue := ctx.DefaultQuery("composite_"+composite, "0")
+				query.Joins("left join " + table + " as " + name + " on " + query.Statement.Table + ".id = " + name + "." + fk + " and " + name + "." + composite + "=" + compositeValue)
+				*columns = append(*columns, query.Statement.Table+"."+composite)
+				*columns = append(*columns, "CASE WHEN "+name+"."+composite+" > 0 THEN 1 ELSE 0 END AS "+name+"_is_true")
+				v["columns"] = append(v["columns"].([]any), "is_true")
+			} else {
+				query.Joins("left join " + table + " as " + name + " on " + query.Statement.Table + "." + fk + " = " + name + ".id")
+				*columns = append(*columns, query.Statement.Table+"."+fk)
 			}
 		}
 	}
@@ -197,7 +207,7 @@ func AttachHasMany(transformer map[string]any) {
 	delete(transformer, "has_many")
 }
 
-func MultiAttachHasMany(results []map[string]any) {
+func MultiAttachHasMany(results []map[string]any, ctx *gin.Context) {
 	ids := []string{}
 
 	for _, result := range results {
@@ -232,12 +242,13 @@ func MultiAttachHasMany(results []map[string]any) {
 						colums[i] = "subQ." + colums[i]
 					}
 
-					SetBelongsTo(query, v, &colums)
+					SetBelongsTo(query, v, &colums, ctx)
 
 					if err := query.Select(colums).Where("rn <= " + strconv.Itoa(limit)).Find(&values).Error; err != nil {
 						fmt.Println(err)
 					}
 
+					// todo : need to fix, return null if belong to not exist
 					values = MultiMapValuesShifter2(v, values)
 				} else {
 					if err := DB.Table(v["table"].(string)).Select(colums).Where(fk+" in ?", ids).Find(&values).Error; err != nil {

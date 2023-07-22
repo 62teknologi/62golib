@@ -289,3 +289,8 @@ func FilterMap(data any, condition func(item map[string]any) bool) []map[string]
 
 	return filtered
 }
+
+func CheckType(v interface{}) string {
+	t := reflect.TypeOf(v)
+	return fmt.Sprintf("%v", t)
+}
