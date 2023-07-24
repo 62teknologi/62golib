@@ -143,19 +143,28 @@ func SetPagination(query *gorm.DB, ctx *gin.Context) map[string]any {
 	return map[string]any{}
 }
 
-func SetBelongsTo(query *gorm.DB, transformer map[string]any, columns *[]string) {
+func SetBelongsTo(query *gorm.DB, transformer map[string]any, columns *[]string, ctx *gin.Context) {
 	if transformer["belongs_to"] != nil {
 		for name, v := range transformer["belongs_to"].(map[string]any) {
 			v := v.(map[string]any)
 			table := v["table"].(string)
-			query.Joins("left join " + table + " as " + name + " on " + query.Statement.Table + "." + v["fk"].(string) + " = " + name + ".id")
-
-			*columns = append(*columns, query.Statement.Table+"."+v["fk"].(string))
+			fk := v["fk"].(string)
 
 			for _, val := range v["columns"].([]any) {
 				*columns = append(*columns, name+"."+val.(string)+" as "+name+"_"+val.(string))
 			}
 
+			if v["composite"] != nil {
+				composite := v["composite"].(string)
+				compositeValue := ctx.DefaultQuery("composite_"+composite, "0")
+				query.Joins("left join " + table + " as " + name + " on " + query.Statement.Table + ".id = " + name + "." + fk + " and " + name + "." + composite + "=" + compositeValue)
+				*columns = append(*columns, query.Statement.Table+"."+composite)
+				*columns = append(*columns, "CASE WHEN "+name+"."+composite+" > 0 THEN 1 ELSE 0 END AS "+name+"_is_true")
+				v["columns"] = append(v["columns"].([]any), "is_true")
+			} else {
+				query.Joins("left join " + table + " as " + name + " on " + query.Statement.Table + "." + fk + " = " + name + ".id")
+				*columns = append(*columns, query.Statement.Table+"."+fk)
+			}
 		}
 	}
 }
@@ -176,11 +185,22 @@ func AttachHasMany(transformer map[string]any) {
 			colums := convertAnyToString(v["columns"].([]any))
 			fk := v["fk"].(string)
 
+			// need implement limit
 			if err := DB.Table(v["table"].(string)).Select(colums).Where(fk+" = ?", transformer["id"]).Find(&values).Error; err != nil {
 				fmt.Println(err)
 			}
 
 			transformer[i] = values
+
+			if v["count"] != nil {
+				count := map[string]any{}
+
+				if err := DB.Table(v["table"].(string)).Select("COUNT(id) as count").Where(fk+" = ?", transformer["id"]).Take(&count).Error; err != nil {
+					fmt.Println(err)
+				}
+
+				transformer[i+"_count"] = count["count"]
+			}
 		}
 	}
 
@@ -214,7 +234,7 @@ func AttachManyToMany(transformer map[string]any) {
 	}
 }
 
-func MultiAttachHasMany(results []map[string]any) {
+func MultiAttachHasMany(results []map[string]any, ctx *gin.Context) {
 	ids := []string{}
 
 	for _, result := range results {
@@ -229,18 +249,62 @@ func MultiAttachHasMany(results []map[string]any) {
 		if transformer["has_many"] != nil {
 			for i, v := range transformer["has_many"].(map[string]any) {
 				v := v.(map[string]any)
-				values := []map[string]any{}
 				fk := v["fk"].(string)
 				colums := convertAnyToString(v["columns"].([]any))
 				colums = append(colums, fk)
+				values := []map[string]any{}
 
-				if err := DB.Table(v["table"].(string)).Select(colums).Where(fk+" in ?", ids).Find(&values).Error; err != nil {
-					fmt.Println(err)
+				if limit := ConvertToInt(v["limit"]); limit > 0 {
+					subSql := DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
+						return tx.
+							Select("*", "ROW_NUMBER() OVER (PARTITION BY "+fk+" ORDER BY id) AS rn").
+							Table(v["table"].(string)).
+							Where(fk, ids).
+							Find(&[]any{})
+					})
+
+					query := DB.Table("(" + subSql + ") AS subQ")
+
+					for i := range colums {
+						colums[i] = "subQ." + colums[i]
+					}
+
+					SetBelongsTo(query, v, &colums, ctx)
+
+					if err := query.Select(colums).Where("rn <= " + strconv.Itoa(limit)).Find(&values).Error; err != nil {
+						fmt.Println(err)
+					}
+
+					// todo : need to fix, return null if belong to not exist
+					values = MultiMapValuesShifter2(v, values)
+				} else {
+					if err := DB.Table(v["table"].(string)).Select(colums).Where(fk+" in ?", ids).Find(&values).Error; err != nil {
+						fmt.Println(err)
+					}
 				}
 
 				for _, result := range results {
 					result[i] = filterSliceByMapIndex(values, fk, result["id"])
 					delete(result, "has_many")
+				}
+
+				if v["count"] != nil {
+					counts := []map[string]any{}
+
+					if err := DB.Table(v["table"].(string)).Select(fk, "COUNT("+fk+") as count").Where(fk+" in ?", ids).Group(fk).Find(&counts).Error; err != nil {
+						fmt.Println(err)
+					}
+
+					for _, result := range results {
+						count := filterSliceByMapIndex(counts, fk, result["id"])
+						result[i+"_count"] = 0
+
+						if len(count) != 0 {
+							countz := count[0].(map[string]any)
+							result[i+"_count"] = countz["count"]
+							delete(result, "has_many")
+						}
+					}
 				}
 			}
 		}
@@ -283,11 +347,13 @@ func GetSummary(transformer map[string]any, values []map[string]any) map[string]
 	if transformer["summary"] != nil {
 		if s := transformer["summary"].(map[string]any); s["total"] != "" {
 			var total int = 0
+
 			for _, v := range values {
 				val := v[s["total"].(string)]
 				total += ConvertToInt(val)
 				delete(v, "summary")
 			}
+
 			summary["total"] = total
 		}
 	}

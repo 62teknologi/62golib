@@ -4,6 +4,7 @@ package utils
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,6 +25,44 @@ func NewValidation(data map[string]any, rules map[string]any) *Validation {
 }
 
 func Validate(data map[string]any, rules map[string]any) (*Validation, bool) {
+	for key := range rules {
+		_, ok := data[key]
+		if rules[key] != nil {
+			if reflect.TypeOf(rules[key]).Kind() != reflect.Map && reflect.TypeOf(rules[key]).Kind() != reflect.Slice {
+				if !ok && !strings.Contains(rules[key].(string), "required") {
+					delete(rules, key)
+				}
+			}
+		}
+	}
+
+	// validate sub fields e.g. { items: [{ name: "required|max:255"}] }
+	filteredSubData := make([]string, 0)
+	for key, value := range data {
+		if value != nil {
+			if reflect.TypeOf(value).Kind() == reflect.Slice {
+				filteredSubData = append(filteredSubData, key)
+			}
+		}
+	}
+	for _, key := range filteredSubData {
+		subData := data[key].([]any)
+		if rules[key] != nil {
+			subRules := rules[key].([]any)
+			if subData[0] != nil {
+				if reflect.TypeOf(subData[0]).Kind() == reflect.Map {
+					validation := NewValidation(subData[0].(map[string]any), subRules[0].(map[string]any))
+					if validation.validate() {
+						return validation, true
+					} else {
+						return validation, false
+					}
+				}
+			}
+		}
+	}
+
+	// Validate parent fields
 	validation := NewValidation(data, rules)
 	if validation.validate() {
 		return validation, true
