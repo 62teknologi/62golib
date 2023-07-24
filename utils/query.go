@@ -311,6 +311,85 @@ func MultiAttachHasMany(results []map[string]any, ctx *gin.Context) {
 	}
 }
 
+func MultiAttachManyToMany(results []map[string]any, ctx *gin.Context) {
+	ids := []string{}
+
+	for _, result := range results {
+		if result["id"] != nil {
+			ids = append(ids, strconv.Itoa(ConvertToInt(result["id"])))
+		}
+	}
+
+	if len(results) > 0 {
+		transformer := results[0]
+
+		if transformer["many_to_many"] != nil {
+			for i, v := range transformer["many_to_many"].(map[string]any) {
+				v := v.(map[string]any)
+				fk1 := v["fk1"].(string)
+				fk2 := v["fk2"].(string)
+				colums := convertAnyToString(v["columns"].([]any))
+				colums = append(colums, fk1)
+				colums = append(colums, fk2)
+				values := []map[string]any{}
+
+				if limit := ConvertToInt(v["limit"]); limit > 0 {
+					subSql := DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
+						return tx.
+							Select("*", "ROW_NUMBER() OVER (PARTITION BY "+fk1+" ORDER BY id) AS rn").
+							Table(v["table"].(string)).
+							Where(fk1, ids).
+							Find(&[]any{})
+					})
+
+					query := DB.Table("(" + subSql + ") AS subQ")
+
+					for i := range colums {
+						colums[i] = "subQ." + colums[i]
+					}
+
+					SetBelongsTo(query, v, &colums, ctx)
+
+					if err := query.Select(colums).Where("rn <= " + strconv.Itoa(limit)).Find(&values).Error; err != nil {
+						fmt.Println(err)
+					}
+
+					// todo : need to fix, return null if belong to not exist
+					values = MultiMapValuesShifter2(v, values)
+				} else {
+					if err := DB.Table(v["table"].(string)).Select(colums).Where(fk1+" in ?", ids).Find(&values).Error; err != nil {
+						fmt.Println(err)
+					}
+				}
+
+				for _, result := range results {
+					result[i] = filterSliceByMapIndex(values, fk1, result["id"])
+					delete(result, "many_to_many")
+				}
+
+				if v["count"] != nil {
+					counts := []map[string]any{}
+
+					if err := DB.Table(v["table"].(string)).Select(fk1, "COUNT("+fk1+") as count").Where(fk1+" in ?", ids).Group(fk1).Find(&counts).Error; err != nil {
+						fmt.Println(err)
+					}
+
+					for _, result := range results {
+						count := filterSliceByMapIndex(counts, fk1, result["id"])
+						result[i+"_count"] = 0
+
+						if len(count) != 0 {
+							countz := count[0].(map[string]any)
+							result[i+"_count"] = countz["count"]
+							delete(result, "many_to_many")
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 func AttachBelongsTo(transformer, value map[string]any) {
 	if transformer["belongs_to"] != nil {
 		for name, v := range transformer["belongs_to"].(map[string]any) {
