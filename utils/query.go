@@ -187,6 +187,33 @@ func AttachHasMany(transformer map[string]any) {
 	delete(transformer, "has_many")
 }
 
+func AttachManyToMany(transformer map[string]any) {
+	if transformer["many_to_many"] != nil {
+		for i, v := range transformer["many_to_many"].(map[string]any) {
+			v := v.(map[string]any)
+			values := []map[string]any{}
+			colums := convertAnyToString(v["columns"].([]any))
+			fk1 := v["fk1"].(string)
+
+			if err := DB.Table(v["table"].(string)).Select(colums).Where(fk1+" = ?", transformer["id"]).Find(&values).Error; err != nil {
+				fmt.Println(err)
+			}
+
+			transformer[i] = values
+
+			if v["count"] != nil {
+				count := map[string]any{}
+
+				if err := DB.Table(v["table"].(string)).Select("COUNT(id) as count").Where(fk1+" = ?", transformer["id"]).Take(&count).Error; err != nil {
+					fmt.Println(err)
+				}
+
+				transformer[i+"_count"] = count["count"]
+			}
+		}
+	}
+}
+
 func MultiAttachHasMany(results []map[string]any) {
 	ids := []string{}
 
