@@ -165,6 +165,32 @@ func SetBelongsTo(query *gorm.DB, transformer map[string]any, columns *[]string,
 				query.Joins("left join " + table + " as " + name + " on " + query.Statement.Table + "." + fk + " = " + name + ".id")
 				*columns = append(*columns, query.Statement.Table+"."+fk)
 			}
+
+			//need better variable name
+			if v["belongs_to"] != nil {
+				for name2, v2 := range v["belongs_to"].(map[string]any) {
+					v2 := v2.(map[string]any)
+					table2 := v2["table"].(string)
+					fk2 := v2["fk"].(string)
+
+					for _, val2 := range v2["columns"].([]any) {
+						*columns = append(*columns, name+"_"+name2+"."+val2.(string)+" as  "+name+"_"+name2+"_"+val2.(string))
+					}
+
+					if v2["composite"] != nil {
+						composite := v2["composite"].(string)
+						compositeValue := ctx.DefaultQuery("composite_"+composite, "0")
+						query.Joins("left join " + table2 + " as " + name + "_" + name2 + " on " + name + ".id = " + name + "_" + name2 + "." + fk2 + " and " + name + "_" + name2 + "." + composite + "=" + compositeValue)
+						*columns = append(*columns, query.Statement.Table+"."+composite)
+						*columns = append(*columns, "CASE WHEN "+name+"_"+name2+"."+composite+" > 0 THEN 1 ELSE 0 END AS "+name+"_"+name2+"_is_true")
+						v2["columns"] = append(v2["columns"].([]any), "is_true")
+					} else {
+						query.Joins("left join " + table2 + " as " + name + "_" + name2 + " on " + name + "." + fk2 + " = " + name + "_" + name2 + ".id")
+						*columns = append(*columns, query.Statement.Table+"."+fk)
+					}
+
+				}
+			}
 		}
 	}
 }
@@ -275,7 +301,7 @@ func MultiAttachHasMany(results []map[string]any, ctx *gin.Context) {
 						fmt.Println(err)
 					}
 
-					// todo : need to fix, return null if belong to not exist
+					// todo : need to fix, should return null if belong to not exist
 					values = MultiMapValuesShifter2(v, values)
 				} else {
 					if err := DB.Table(v["table"].(string)).Select(colums).Where(fk+" in ?", ids).Find(&values).Error; err != nil {
@@ -402,6 +428,22 @@ func AttachBelongsTo(transformer, value map[string]any) {
 			}
 
 			transformer[name] = values
+
+			//need better variable name
+			if v["belongs_to"] != nil {
+				for name2, v2 := range v["belongs_to"].(map[string]any) {
+					v2 := v2.(map[string]any)
+					values2 := map[string]any{}
+
+					for _, val2 := range v2["columns"].([]any) {
+						values2[val2.(string)] = value[name+"_"+name2+"_"+val2.(string)]
+						//delete(transformer, v["fk"].(string))
+					}
+
+					t := transformer[name].(map[string]any)
+					t[name2] = values2
+				}
+			}
 		}
 	}
 
