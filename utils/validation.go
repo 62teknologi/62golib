@@ -29,8 +29,10 @@ func Validate(data map[string]any, rules map[string]any) (*Validation, bool) {
 		_, ok := data[key]
 		if rules[key] != nil {
 			if reflect.TypeOf(rules[key]).Kind() != reflect.Map && reflect.TypeOf(rules[key]).Kind() != reflect.Slice {
-				if !ok && !strings.Contains(rules[key].(string), "required") {
-					delete(rules, key)
+				if reflect.TypeOf(rules[key]).Kind() == reflect.String {
+					if !ok && !strings.Contains(rules[key].(string), "required") {
+						delete(rules, key)
+					}
 				}
 			}
 		}
