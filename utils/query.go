@@ -238,14 +238,24 @@ func AttachManyToMany(transformer map[string]any) {
 		for i, v := range transformer["many_to_many"].(map[string]any) {
 			v := v.(map[string]any)
 			values := []map[string]any{}
-			colums := convertAnyToString(v["columns"].([]any))
+			columns := convertAnyToString(v["columns"].([]any))
 			fk1 := v["fk1"].(string)
+			fk2 := v["fk2"].(string)
 
-			if err := DB.Table(v["table"].(string)).Select(colums).Where(fk1+" = ?", transformer["id"]).Find(&values).Error; err != nil {
+			if err := DB.Table(v["table"].(string)).Select("*").Where(fk1+" = ?", transformer["id"]).Find(&values).Error; err != nil {
 				fmt.Println(err)
 			}
 
-			transformer[i] = values
+			var m2mValues []map[string]any
+			for _, val := range values {
+				var m2mValue map[string]any
+				if err := DB.Table(i).Select(columns).Where("id = ?", val[fk2]).Find(&m2mValue).Error; err != nil {
+					fmt.Println(err)
+				}
+				m2mValues = append(m2mValues, m2mValue)
+			}
+
+			transformer[i] = m2mValues
 
 			if v["count"] != nil {
 				count := map[string]any{}
