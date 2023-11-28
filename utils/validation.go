@@ -119,6 +119,26 @@ func (v *Validation) validate() bool {
 					v.Errors[field]["number"] = field + " field must be a number"
 					continue
 				}
+			} else if strings.HasPrefix(r, "in:") {
+				r = strings.TrimPrefix(r, "in:")
+				listRule := strings.Split(r, ",")
+				if len(listRule) < 2 {
+					v.Errors[field]["in"] = field + " field has an invalid rule"
+					continue
+				}
+
+				isValid := false
+				for _, item := range listRule {
+					if item == value {
+						isValid = true
+						break
+					}
+				}
+
+				if !isValid {
+					v.Errors[field]["in"] = field + " field must be one of " + strings.Join(listRule, ", ")
+					continue
+				}
 			} else {
 				v.Errors[field][r] = field + " field has an invalid rule"
 				continue
