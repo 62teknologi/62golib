@@ -47,17 +47,18 @@ func Validate(data map[string]any, rules map[string]any) (*Validation, bool) {
 			}
 		}
 	}
+
 	for _, key := range filteredSubData {
 		subData := data[key].([]any)
 		if rules[key] != nil {
-			subRules := rules[key].([]any)
-			if subData[0] != nil {
-				if reflect.TypeOf(subData[0]).Kind() == reflect.Map {
-					validation := NewValidation(subData[0].(map[string]any), subRules[0].(map[string]any))
-					if validation.validate() {
-						return validation, true
-					} else {
-						return validation, false
+			if reflect.TypeOf(rules[key]).Kind() == reflect.Slice {
+				subRules := rules[key].([]any)
+				if subData[0] != nil {
+					if reflect.TypeOf(subData[0]).Kind() == reflect.Map {
+						validation := NewValidation(subData[0].(map[string]any), subRules[0].(map[string]any))
+						if validation.validate() {
+							return validation, false
+						}
 					}
 				}
 			}
@@ -122,7 +123,7 @@ func (v *Validation) validate() bool {
 			} else if strings.HasPrefix(r, "in:") {
 				r = strings.TrimPrefix(r, "in:")
 				listRule := strings.Split(r, ",")
-				if len(listRule) < 2 {
+				if len(listRule) == 0 {
 					v.Errors[field]["in"] = field + " field has an invalid rule"
 					continue
 				}
