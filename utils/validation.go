@@ -140,6 +140,16 @@ func (v *Validation) validate() bool {
 					v.Errors[field]["in"] = field + " field must be one of " + strings.Join(listRule, ", ")
 					continue
 				}
+			} else if r == "boolean" {
+				boolValue, err := strconv.ParseBool(value)
+				if err != nil && value != "1" && value != "0" {
+					v.Errors[field]["boolean"] = field + " field must be a boolean value (true, false, 1 atau 0)"
+					continue
+				}
+				if !boolValue && value != "false" && value != "0" {
+					v.Errors[field]["boolean"] = field + " field must be a boolean value (true, false, 1 atau 0)"
+					continue
+				}
 			} else {
 				v.Errors[field][r] = field + " field has an invalid rule"
 				continue
